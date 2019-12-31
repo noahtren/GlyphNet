@@ -90,9 +90,50 @@ def discriminator(vector_dim:int=32, R:int=4, first_channels:int=8, c:int=1):
         x = conv_block(x, filters, block_name='conv_block', index=r + 1, pooling=True)
         filters *= 2
     x = tf.keras.layers.GlobalAveragePooling2D(name='prediction_GAP')(x)
-    x = tf.keras.layers.Dense(vector_dim, name='prediction')(x) # no activation function
+    x = tf.keras.layers.Dense(vector_dim + 1, name='prediction')(x)
+    # prediction has no activation function, and the final element of the vector represents noise (no signal)
     D = tf.keras.models.Model(inputs=[input_], outputs=[x])
     return D
+
+
+def make_generator_with_opt(opt):
+    """Return a Keras generator according to argparse options
+    """
+    G = generator(opt.vector_dim, opt.r, opt.num_filters, opt.c)
+    return G
+
+
+def make_discriminator_with_opt(opt):
+    """Return a Keras discriminator according to argparse options
+    """
+    D = discriminator(opt.vector_dim, opt.r, opt.num_filters, opt.c)
+    return D
+
+
+def adversarial_loss(encoding):
+    """Return loss function for adversarial generator, dependent on signal encoding
+    WIP
+    """
+
+    def one_hot_loss(y_true, y_pred):
+        y_true = tf.nn.softmax(y_true)
+        y_pred = tf.nn.softmax(y_pred)
+        loss = tf.keras.losses.binary_crossentropy(y_true[:, -1], y_pred[:, -1])
+        return loss
+
+    def binary_loss(y_true, y_pred):
+        """Only compare the last examples
+        """
+        loss = tf.keras.losses.binary_crossentropy(tf.nn.sigmoid(y_true[:, -1]), 
+                                            1 - tf.nn.sigmoid(y_pred[:, -1]))
+        return loss
+
+    if encoding == 'one-hot':
+        return one_hot_loss
+    elif encoding == 'binary':
+        return binary_loss
+    else:
+        raise RuntimeError(f"Encoding '{encoding}' not understood")
 
 
 if __name__ == "__main__":
