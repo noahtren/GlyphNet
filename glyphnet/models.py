@@ -21,15 +21,16 @@ def make_name(block_name, layer_name, index=None):
         return f'{block_name}_{layer_name}_{index}'
 
 
-def conv_block(x, filters, block_name, index=None, pooling=False, one_by_one=False):
+def conv_block(x, filters, block_name, index=None, pooling=False, one_by_one=False, sigmoid=False):
     """Typical convolution block with flag to control if downsampling or not
     """
     _make_name = lambda layer_name: make_name(block_name, layer_name, index)
     kernel = 1 if one_by_one else 3
     stride = 2 if pooling else 1
+    activation = swish if not sigmoid else 'sigmoid'
     x = tf.keras.layers.Conv2D(filters, kernel, stride, padding='same', name=_make_name('conv'))(x)
     x = tf.keras.layers.BatchNormalization(name=_make_name('bn'))(x)
-    x = tf.keras.layers.Activation(swish, name=_make_name('swish'))(x)
+    x = tf.keras.layers.Activation(activation, name=_make_name('swish'))(x)
     return x
 
 
@@ -65,7 +66,7 @@ def generator(vector_dim:int=32, R:int=4, last_channels:int=8, c:int=1):
     for r in range(R):
         x = deconv_block(x, int(filters), block_name='deconv_block', index=r + 1)
         filters /= 2
-    x = conv_block(x, c, block_name='prediction_conv', pooling=False)
+    x = conv_block(x, c, block_name='prediction_conv', pooling=False, sigmoid=True)
     G = tf.keras.models.Model(inputs=[input_], outputs=[x])
     return G
 

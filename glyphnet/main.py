@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 from glyphnet.models import make_generator_with_opt, make_discriminator_with_opt
-from glyphnet.noise import random_generator_noise
+from glyphnet.noise import random_generator_noise, random_glyphs, get_noisy_channel
 
 
 def get_opt():
@@ -120,6 +120,7 @@ if __name__ == "__main__":
 
     G_optim = tf.keras.optimizers.Adam()
     D_optim = tf.keras.optimizers.Adam()
+    noisy_channel = get_noisy_channel()
 
     for epoch in range(opt.epochs):
         random_G = make_generator_with_opt(opt)
@@ -128,6 +129,7 @@ if __name__ == "__main__":
             # Train discriminator on positive example
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             glyphs = G(signals)
+            glyphs = noisy_channel(glyphs, glyph_size, opt.c)
             with tf.GradientTape() as tape:
                 D_pred = D(glyphs)
                 D_loss = loss_fn(labels, D_pred)
@@ -135,9 +137,13 @@ if __name__ == "__main__":
             D_optim.apply_gradients(zip(grads, D.trainable_variables))
 
             # Train discriminator on random example
-            signals, _ = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
-            noise_labels = make_noise_labels(opt.batch_size, opt.vector_dim)
-            noise_glyphs = random_G(signals)
+            noise_glyphs = None
+            if step % 2 == 0:
+                signals, _ = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
+                noise_labels = make_noise_labels(opt.batch_size, opt.vector_dim)
+                noise_glyphs = random_G(signals)
+            else:
+                noise_glyphs = random_glyphs(opt.batch_size, glyph_size, opt.c)
             with tf.GradientTape() as tape:
                 D_pred = D(noise_glyphs)
                 D_fake_loss = loss_fn(noise_labels, D_pred)
@@ -148,6 +154,7 @@ if __name__ == "__main__":
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             with tf.GradientTape() as tape:
                 glyphs = G(signals)
+                glyphs = noisy_channel(glyphs, glyph_size, opt.c)
                 D_pred = D(glyphs)
                 G_loss = loss_fn(labels, D_pred)
             grads = tape.gradient(G_loss, G.trainable_variables)
