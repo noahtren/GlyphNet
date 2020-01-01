@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 from glyphnet.models import make_generator_with_opt, make_discriminator_with_opt
-from glyphnet.noise import random_generator_noise, random_glyphs, get_noisy_channel
+from glyphnet.noise import random_generator_noise, random_glyphs, experimental_noisy_channel
 from glyphnet.utils import visualize
 
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     G_optim = tf.keras.optimizers.Adam()
     D_optim = tf.keras.optimizers.Adam()
     # noisy channel adds noise to generated glyphs
-    noisy_channel = get_noisy_channel()
+    noisy_channel = experimental_noisy_channel()
 
     for epoch in range(opt.epochs):
         random_G = make_generator_with_opt(opt)
@@ -121,7 +121,7 @@ if __name__ == "__main__":
             # Train discriminator on positive example
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             glyphs = G(signals)
-            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, glyph_shape)
+            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs)
             with tf.GradientTape() as tape:
                 D_pred = D(glyphs)
                 D_loss = loss_fn(labels, D_pred)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             with tf.GradientTape() as tape:
                 glyphs = G(signals)
-                glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, glyph_shape)
+                glyphs = glyphs if opt.no_noise else noisy_channel(glyphs)
                 D_pred = D(glyphs)
                 G_loss = loss_fn(labels, D_pred)
             grads = tape.gradient(G_loss, G.trainable_variables)
