@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 
 from glyphnet.models import make_generator_with_opt, make_discriminator_with_opt
 from glyphnet.noise import random_generator_noise, random_glyphs, get_noisy_channel
+from glyphnet.utils import visualize
 
 
 def get_opt():
@@ -30,9 +31,10 @@ def get_opt():
     parser.add_argument('-r', type=int, default=4)
     parser.add_argument('--num_filters', type=int, default=8)
     parser.add_argument('-c', type=int, default=1)
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--steps_per_epoch', type=int, default=100)
+    parser.add_argument('--no_noise', action='store_true', default=False)
     opt = parser.parse_args()
     return opt
 
@@ -67,6 +69,7 @@ def make_noise_labels(batch_size, vector_dim):
     noise_label = tf.concat((zeros, ones), axis=1)
     return noise_label
 
+
 def get_glyph_symbol(signal):
     """Get an alphanumeric symbol to associate with a given signal/glyph
     """
@@ -82,32 +85,20 @@ def get_glyph_symbol(signal):
         raise RuntimeError(f"Encoding '{opt.encoding}' not understood")
 
 
-def visualize_samples(sqrt_samples, title):
-    """Generates a square of samples to visualize all at once
+def visualize_samples(dim, title):
+    """Generate a square of samples and visualize them
     """
-    num_samples = sqrt_samples ** 2
-    signals, _ = make_signals(num_samples, opt.encoding, opt.vector_dim)
+    num_glyphs = dim ** 2
+    signals = make_signals(num_glyphs, opt.encoding, opt.vector_dim)
+    symbols = [get_glyph_symbol(signal) for signal in signals]
     glyphs = G(signals)
-    glyphs = tf.nn.sigmoid(glyphs) * 255.
-    subplot_titles = [get_glyph_symbol(signal) for signal in signals]
-    fig = make_subplots(sqrt_samples, sqrt_samples, subplot_titles=subplot_titles)
-    row_num = 1; col_num = 1
-    for glyph in glyphs:
-        if opt.c == 1:
-            glyph = tf.broadcast_to(glyph, (glyph_size, glyph_size, 3))
-        fig.add_trace(go.Image(z=glyph), row=row_num, col=col_num)
-        if col_num == sqrt_samples:
-            row_num += 1
-            col_num = 1
-        else:
-            col_num += 1
-    fig.update_layout(title_text=title)
-    fig.show()
+    visualize(symbols, glyphs, title)
 
 
 if __name__ == "__main__":
     opt = get_opt()
     glyph_size = 2 ** opt.r
+    glyph_shape = [glyph_size, glyph_size, opt.c]
 
     G = make_generator_with_opt(opt)
     D = make_discriminator_with_opt(opt)
@@ -120,6 +111,7 @@ if __name__ == "__main__":
 
     G_optim = tf.keras.optimizers.Adam()
     D_optim = tf.keras.optimizers.Adam()
+    # noisy channel adds noise to generated glyphs
     noisy_channel = get_noisy_channel()
 
     for epoch in range(opt.epochs):
@@ -129,7 +121,7 @@ if __name__ == "__main__":
             # Train discriminator on positive example
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             glyphs = G(signals)
-            glyphs = noisy_channel(glyphs, glyph_size, opt.c)
+            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, glyph_shape)
             with tf.GradientTape() as tape:
                 D_pred = D(glyphs)
                 D_loss = loss_fn(labels, D_pred)
@@ -137,13 +129,16 @@ if __name__ == "__main__":
             D_optim.apply_gradients(zip(grads, D.trainable_variables))
 
             # Train discriminator on random example
+            # every other step, the example is either from:
+            #  * a randomly initialized generator, or
+            #  * a function that produces random noise
             noise_glyphs = None
             if step % 2 == 0:
                 signals, _ = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
                 noise_labels = make_noise_labels(opt.batch_size, opt.vector_dim)
                 noise_glyphs = random_G(signals)
             else:
-                noise_glyphs = random_glyphs(opt.batch_size, glyph_size, opt.c)
+                noise_glyphs = random_glyphs(opt.batch_size, glyph_shape)
             with tf.GradientTape() as tape:
                 D_pred = D(noise_glyphs)
                 D_fake_loss = loss_fn(noise_labels, D_pred)
@@ -154,7 +149,7 @@ if __name__ == "__main__":
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             with tf.GradientTape() as tape:
                 glyphs = G(signals)
-                glyphs = noisy_channel(glyphs, glyph_size, opt.c)
+                glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, glyph_shape)
                 D_pred = D(glyphs)
                 G_loss = loss_fn(labels, D_pred)
             grads = tape.gradient(G_loss, G.trainable_variables)
