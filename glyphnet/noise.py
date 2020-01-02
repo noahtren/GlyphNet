@@ -4,11 +4,6 @@
 import tensorflow as tf
 import numpy as np
 
-import imgaug
-from imgaug import augmenters as iaa
-from imgaug.parameters import Normal
-from imgaug.augmentables.batches import Batch
-
 from glyphnet.models import make_generator_with_opt
 from glyphnet.utils import visualize
 
@@ -30,82 +25,80 @@ def random_glyphs(batch_size, glyph_shape):
 
 
 class Differentiable_Augment:
-    """Collection of differentiable augmentation functions to include in TF graph.
+    """Collection of differentiable augmentation functions implemented in TF
     """
 
     @staticmethod
-    def static(glyphs, glyph_shape):
+    def static(glyphs, stddev=0.01):
+        glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
-        noise = tf.random.normal((batch_size, *glyph_shape), mean=0, stddev=0.1)
+        noise = tf.random.normal((batch_size, *glyph_shape), mean=0, stddev=stddev)
         glyphs = glyphs + noise
         return glyphs
 
 
     @staticmethod
-    def translate(glyphs, glyph_shape, minval=-5, maxval=5):
+    def translate(glyphs, minval=-2, maxval=2):
         """Shift each glyph a pixel distance from minval to maxval, using zero padding
+        > For efficiency, each batch is augmented in the same way
         """
-        new_glyphs = []
-        for glyph in glyphs:
-            shift_x, shift_y = tf.random.uniform([2], minval=minval, maxval=maxval + 1, dtype=tf.int32)
-            if shift_x != 0:
-                zeros = tf.zeros((glyph_shape[0], abs(shift_x), glyph_shape[2]), dtype=tf.float32)
-                if shift_x > 0: # shift right
-                    chunk = glyph[:, :-shift_x, :]
-                    glyph = tf.concat((zeros, chunk), axis=1)
-                else: # shift left
-                    shift_x = abs(shift_x)
-                    chunk = glyph[:, shift_x:, :]
-                    glyph = tf.concat((chunk, zeros), axis=1)
-            if shift_y != 0:
-                zeros = tf.zeros((abs(shift_y), glyph_shape[1], glyph_shape[2]), dtype=tf.float32)
-                if shift_y > 0: # shift up
-                    chunk = glyph[:-shift_y]
-                    glyph = tf.concat((zeros, chunk), axis=0)
-                else: # shift down
-                    shift_y = abs(shift_y)
-                    chunk = glyph[shift_y:]
-                    glyph = tf.concat((chunk, zeros), axis=0)
-            new_glyphs.append(glyph)
-        new_glyphs = tf.stack(new_glyphs)
-        return new_glyphs
+        glyph_shape = glyphs[0].shape
+        batch_size = glyphs.shape[0]
+        shift_x, shift_y = tf.random.uniform([2], minval=minval, maxval=maxval + 1, dtype=tf.int32)
+        if shift_x != 0:
+            zeros = tf.zeros((batch_size, glyph_shape[0], abs(shift_x), glyph_shape[2]), dtype=tf.float32)
+            if shift_x > 0: # shift right
+                chunk = glyphs[:, :, :-shift_x]
+                glyphs = tf.concat((zeros, chunk), axis=2)
+            else: # shift left
+                shift_x = abs(shift_x)
+                chunk = glyphs[:, :, shift_x:]
+                glyphs = tf.concat((chunk, zeros), axis=2)
+        if shift_y != 0:
+            zeros = tf.zeros((batch_size, abs(shift_y), glyph_shape[1], glyph_shape[2]), dtype=tf.float32)
+            if shift_y > 0: # shift up
+                chunk = glyphs[:, :-shift_y]
+                glyphs = tf.concat((zeros, chunk), axis=1)
+            else: # shift down
+                shift_y = abs(shift_y)
+                chunk = glyphs[:, shift_y:]
+                glyphs = tf.concat((chunk, zeros), axis=1)
+        return glyphs
     
 
     @staticmethod
-    def resize(glyphs, glyph_shape, minscale=0.8, maxscale=1.2):
-        new_glyphs = []
-        for glyph in glyphs:
-            x_scale, y_scale = tf.random.uniform([2], minval=minscale, maxval=maxscale)
-            target_width = tf.cast(x_scale * glyph_shape[1], tf.int32)
-            target_height = tf.cast(y_scale * glyph_shape[0], tf.int32)
-            glyph = tf.image.resize(glyph, (target_height, target_width))
-            glyph = tf.image.resize_with_crop_or_pad(glyph, glyph_shape[0], glyph_shape[1])
-            new_glyphs.append(glyph)
-        new_glyphs = tf.stack(new_glyphs)
-        return new_glyphs
+    def resize(glyphs, minscale=0.9, maxscale=1.1):
+        glyph_shape = glyphs[0].shape
+        batch_size = glyphs.shape[0]
+        x_scale, y_scale = tf.random.uniform([2], minval=minscale, maxval=maxscale)
+        target_width = tf.cast(x_scale * glyph_shape[1], tf.int32)
+        target_height = tf.cast(y_scale * glyph_shape[0], tf.int32)
+        glyphs = tf.image.resize(glyphs, (target_height, target_width))
+        glyphs = tf.image.resize_with_crop_or_pad(glyphs, glyph_shape[0], glyph_shape[1])
+        return glyphs
 
 
-def get_noisy_channel(func_names=['translate', 'resize']):
+def get_noisy_channel(func_names=['translate', 'resize', 'static']):
     """Return a function that adds noise to glyphs
     """
-    def noise_pipeline(glyphs, glyph_shape, funcs):
+    def noise_pipeline(glyphs, funcs):
         """Apply a series of functions to glyphs, in order
         """
         for func in funcs:
-            glyphs = func(glyphs, glyph_shape)
+            glyphs = func(glyphs)
         return glyphs
     funcs = []
     for func_name in func_names:
         assert func_name in dir(Differentiable_Augment), f"Function '{func_name}' doesn't exist"
         funcs.append(getattr(Differentiable_Augment, func_name))
-    return lambda glyphs, glyph_shape: noise_pipeline(glyphs, glyph_shape, funcs)
+    return lambda glyphs: noise_pipeline(glyphs, funcs)
 
 
 # preview image augmentation
 if __name__ == "__main__":
     symbols = ['random'] * 9
     glyphs = random_glyphs(9, [16, 16, 1])
-    noisy_chanel = get_noisy_channel(func_names=['translate', 'resize'])
-    new_glyphs = noisy_chanel(glyphs, glyphs[0].shape)
+    noisy_chanel = get_noisy_channel()
+    new_glyphs = noisy_chanel(glyphs)
     visualize(symbols, glyphs, 'Before Augmentation')
     visualize(symbols, new_glyphs, 'After Augmentation')

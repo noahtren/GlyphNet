@@ -14,6 +14,7 @@ def visualize(symbols, glyphs, title):
     dim = len(glyphs) ** (1/2)
     assert dim == int(dim), "Number of glyphs should be square"
     dim = int(dim)
+    glyphs = tf.nn.sigmoid(glyphs) # from 0 to 1 (instead of swish result)
     glyphs = glyphs * 255. # make visual
     fig = make_subplots(dim, dim, subplot_titles=symbols)
     row_num = 1; col_num = 1

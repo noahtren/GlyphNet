@@ -2,6 +2,7 @@
 """
 
 import argparse
+import code
 
 import tensorflow as tf
 from plotly.subplots import make_subplots
@@ -14,27 +15,27 @@ from glyphnet.utils import visualize
 
 def get_opt():
     """Use argparse library to assign options for training run.
-
-    Descriptions of options:
-        * vector_dim is the size of the vector to communicate
-        * encoding describes the kinds of values that the vector can contain:
-            one-hot: all values are 0 except 1
-            binary: all values are either 0 or 1, uniformly distributed
-        * r ^ 2 is size of images
-        * num_filters is the number of filters before and after image
-        * c is number of channels
-    TODO: set as help in CLI
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--vector_dim', type=int, default=26)
-    parser.add_argument('--encoding', type=str, default='one-hot')
-    parser.add_argument('-r', type=int, default=4)
-    parser.add_argument('--num_filters', type=int, default=8)
-    parser.add_argument('-c', type=int, default=1)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--vector_dim', type=int, default=32,
+                        help='The size of the vector to communicate')
+    parser.add_argument('--encoding', type=str, default='one-hot',
+                        help="'one-hot' to make all values 0 except for one. Unique num = vector_dim" +
+                             "\n'binary' to make all values either 0 or 1, randomly distributed. Unique num = vector_dim ^ 2")
+    parser.add_argument('-r', type=int, default=6,
+                        help='Number of upsample/downsample layers in G and D')
+    parser.add_argument('--num_filters', type=int, default=8,
+                        help='Number of filters to use right before and after the signal')
+    parser.add_argument('-c', type=int, default=1,
+                        help='Number of channels in the signal. 3 produces color images')
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--epochs', type=int, default=30)
-    parser.add_argument('--steps_per_epoch', type=int, default=100)
-    parser.add_argument('--no_noise', action='store_true', default=False)
+    parser.add_argument('--steps_per_epoch', type=int, default=1000)
+    parser.add_argument('--no_noise', action='store_true', default=False,
+                        help='Boolean flag to train with or without a noisy channel')
+    parser.add_argument('--vis_frequency', type=int, default=1,
+                        help='How many epochs between visualizationss')
+    parser.add_argument('--debug', action='store_true', default=False, help='Toggle debug mode (prints gradient information)')
     opt = parser.parse_args()
     return opt
 
@@ -64,6 +65,8 @@ def make_signals(batch_size, encoding, vector_dim):
 
 
 def make_noise_labels(batch_size, vector_dim):
+    """Generate message labels that represent noise (all 0 except last dimension)
+    """
     zeros = tf.zeros((batch_size, vector_dim), dtype=tf.float32)
     ones = tf.ones((batch_size, 1), dtype=tf.float32)
     noise_label = tf.concat((zeros, ones), axis=1)
@@ -74,11 +77,11 @@ def get_glyph_symbol(signal):
     """Get an alphanumeric symbol to associate with a given signal/glyph
     """
     if opt.encoding == 'one-hot':
-        signal = tf.argmax(signal)
+        signal = tf.argmax(signal).numpy()
         if opt.vector_dim <= 26:
             return chr(signal + 97)
         else:
-            return signal
+            return str(signal)
     elif opt.encoding == 'binary':
         return ''.join(str(int(digit.numpy())) for digit in signal)
     else:
@@ -89,7 +92,7 @@ def visualize_samples(dim, title):
     """Generate a square of samples and visualize them
     """
     num_glyphs = dim ** 2
-    signals = make_signals(num_glyphs, opt.encoding, opt.vector_dim)
+    signals, labels = make_signals(num_glyphs, opt.encoding, opt.vector_dim)
     symbols = [get_glyph_symbol(signal) for signal in signals]
     glyphs = G(signals)
     visualize(symbols, glyphs, title)
@@ -102,6 +105,8 @@ if __name__ == "__main__":
 
     G = make_generator_with_opt(opt)
     D = make_discriminator_with_opt(opt)
+    G.summary()
+    D.summary()
 
     loss_fn = None
     if opt.encoding == 'one-hot':
@@ -109,8 +114,8 @@ if __name__ == "__main__":
     else:
         loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-    G_optim = tf.keras.optimizers.Adam()
-    D_optim = tf.keras.optimizers.Adam()
+    G_optim = tf.keras.optimizers.Adam(lr=0.001)
+    D_optim = tf.keras.optimizers.Adam(lr=0.001)
     # noisy channel adds noise to generated glyphs
     noisy_channel = get_noisy_channel()
 
@@ -121,12 +126,15 @@ if __name__ == "__main__":
             # Train discriminator on positive example
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             glyphs = G(signals)
-            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, glyph_shape)
+            # code.interact(local=locals())
+            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs)
             with tf.GradientTape() as tape:
                 D_pred = D(glyphs)
                 D_loss = loss_fn(labels, D_pred)
             grads = tape.gradient(D_loss, D.trainable_variables)
             D_optim.apply_gradients(zip(grads, D.trainable_variables))
+            if opt.debug:
+                print(f'D average grads: {tf.math.reduce_mean(grads[-1])}', end=' ')
 
             # Train discriminator on random example
             # every other step, the example is either from:
@@ -149,13 +157,15 @@ if __name__ == "__main__":
             signals, labels = make_signals(opt.batch_size, opt.encoding, opt.vector_dim)
             with tf.GradientTape() as tape:
                 glyphs = G(signals)
-                glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, glyph_shape)
+                glyphs = glyphs if opt.no_noise else noisy_channel(glyphs)
                 D_pred = D(glyphs)
                 G_loss = loss_fn(labels, D_pred)
             grads = tape.gradient(G_loss, G.trainable_variables)
             G_optim.apply_gradients(zip(grads, G.trainable_variables))
+            if opt.debug:
+                print(f'G average grads: {tf.math.reduce_mean(grads[-1])}', end=' ')
 
             print(f'[{epoch+1}/{opt.epochs}] [{step+1}/{opt.steps_per_epoch}] ' +
                   f'Loss: {D_loss + G_loss + D_fake_loss}')
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % opt.vis_frequency == 0:
             visualize_samples(3, title=f'Epoch {epoch + 1}')

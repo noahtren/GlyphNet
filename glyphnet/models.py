@@ -64,7 +64,9 @@ def generator(vector_dim:int=32, R:int=4, last_channels:int=8, c:int=1):
     x = conv_block(x, filters, block_name='stem', one_by_one=True)
     filters /= 2
     for r in range(R):
-        x = deconv_block(x, int(filters), block_name='deconv_block', index=r + 1)
+        pre = deconv_block(x, int(filters), block_name='deconv_block', index=r + 1)
+        x = conv_block(pre, int(filters), block_name='conv_1by1', index=r + 1, one_by_one=True)
+        x = tf.keras.layers.Add(name=f'add_{r+1}')([pre, x])
         filters /= 2
     x = conv_block(x, c, block_name='prediction_conv', pooling=False, sigmoid=True)
     G = tf.keras.models.Model(inputs=[input_], outputs=[x])
@@ -88,7 +90,9 @@ def discriminator(vector_dim:int=32, R:int=4, first_channels:int=8, c:int=1):
     filters = first_channels * 2
     x = conv_block(x, filters, block_name='stem', pooling=False)
     for r in range(R):
-        x = conv_block(x, filters, block_name='conv_block', index=r + 1, pooling=True)
+        pre = conv_block(x, filters, block_name='conv_block', index=r + 1, pooling=True)
+        x = conv_block(pre, int(filters), block_name='conv_1by1', index=r + 1, one_by_one=True)
+        x = tf.keras.layers.Add(name=f'add_{r+1}')([pre, x])
         filters *= 2
     x = tf.keras.layers.GlobalAveragePooling2D(name='prediction_GAP')(x)
     x = tf.keras.layers.Dense(vector_dim + 1, name='prediction')(x)
@@ -113,9 +117,8 @@ def make_discriminator_with_opt(opt):
 
 def adversarial_loss(encoding):
     """Return loss function for adversarial generator, dependent on signal encoding
-    WIP
+    WIP -- NOT IMPLEMENTED
     """
-
     def one_hot_loss(y_true, y_pred):
         y_true = tf.nn.softmax(y_true)
         y_pred = tf.nn.softmax(y_pred)
