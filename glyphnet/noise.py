@@ -127,7 +127,7 @@ class Differentiable_Augment:
             7: [0.65, 1.35]
         }
         glyph_shape = glyphs[0].shape
-        batch_size = glyphs.shape[0]
+        # batch_size = glyphs.shape[0]
         minscale, maxscale = RESIZE_SCALES[DIFFICULTY]
         x_scale, y_scale = tf.random.uniform([2], minval=minscale, maxval=maxscale)
         target_width = tf.cast(x_scale * glyph_shape[1], tf.int32)
@@ -152,7 +152,7 @@ class Differentiable_Augment:
         }
         min_angle = RADIANS[DIFFICULTY] * -1
         max_angle = RADIANS[DIFFICULTY]
-        glyph_shape = glyphs[0].shape
+        # glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
         angles = tf.random.uniform([batch_size], minval=min_angle, maxval=max_angle)
         glyphs = tfa.image.rotate(glyphs, angles, interpolation='BILINEAR')

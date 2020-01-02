@@ -3,6 +3,7 @@
 
 import argparse
 import code
+import os
 
 import tensorflow as tf
 from plotly.subplots import make_subplots
@@ -36,6 +37,7 @@ def get_opt():
     parser.add_argument('--vis_frequency', type=int, default=1,
                         help='How many epochs between visualizationss')
     parser.add_argument('--debug', action='store_true', default=False, help='Toggle debug mode (prints gradient information)')
+    parser.add_argument('--run', type=str, default='test')
     opt = parser.parse_args()
     return opt
 
@@ -92,7 +94,7 @@ def visualize_samples(dim, title):
     """Generate a square of samples and visualize them
     """
     num_glyphs = dim ** 2
-    messages, labels = make_messages(num_glyphs, opt.encoding, opt.vector_dim)
+    messages, _ = make_messages(num_glyphs, opt.encoding, opt.vector_dim)
     symbols = [get_glyph_symbol(message) for message in messages]
     glyphs = G(messages)
     visualize(symbols, glyphs, title)
@@ -106,7 +108,7 @@ def update_difficulty(DIFFICULTY, loss):
     """
     if loss > 5 and DIFFICULTY > 0:
         DIFFICULTY -= 1
-    if loss < 1 and DIFFICULTY < 7:
+    if loss < 2 and DIFFICULTY < 7:
         DIFFICULTY += 1
     return DIFFICULTY
 
@@ -131,6 +133,9 @@ if __name__ == "__main__":
     D_optim = tf.keras.optimizers.Adam(lr=0.0005, beta_1=0.5)
     # noisy channel adds noise to generated glyphs
     noisy_channel = get_noisy_channel()
+
+    os.makedirs(os.path.join('checkpoints', opt.run, 'G'), exist_ok=True)
+    os.makedirs(os.path.join('checkpoints', opt.run, 'D'), exist_ok=True)
 
     DIFFICULTY = 0
 
@@ -192,3 +197,6 @@ if __name__ == "__main__":
 
         if (epoch + 1) % opt.vis_frequency == 0:
             visualize_samples(3, title=f'Epoch {epoch + 1}')
+        
+        G.save(os.path.join('checkpoints', opt.run, 'G', f'{epoch + 1:03d}_{epoch_loss}.h5'))
+        D.save(os.path.join('checkpoints', opt.run, 'D', f'{epoch + 1:03d}_{epoch_loss}.h5'))

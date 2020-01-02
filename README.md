@@ -17,9 +17,9 @@ decode back into the original message. The message is either a one-hot encoded
 vector or a vector of binary values (ex. [0, 1, 1, 0...]). The two networks are trained
 at the same time, like an autoencoder.
 
-The task gets difficult because the communication channel is noisy. The transmitted image
-(**signal**) may be shifted, resized, rotated, etc. so that the received signal differs
-from the original signal.
+The task varies from a typical autoencoder because the communication channel (latent space)
+is noisy. The transmitted image (**signal**) may be shifted, resized, rotated, etc. so that the
+received signal differs from the original signal.
 
 Another catch is that the communication channel becomes _increasingly_ noisy over time (this
 is inspired by [Automatic Domain Randomization](https://openai.com/blog/solving-rubiks-cube/)
@@ -34,7 +34,7 @@ a visual language that is robust to many different kinds of noise, which means i
 
 These are some examples of visual languages the models came up with after about 
 a day of coding and half an hour of training. The plot titles are either letter or numbers, representing a unique
-symbol.
+symbol. I'll put some later examples here soon.
 
 ![](https://i.imgur.com/NNh58Nx.png)
 
