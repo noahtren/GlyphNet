@@ -42,8 +42,11 @@ symbol. I'll put some later examples here soon.
 
 ## Installation
 
-Glyphnet itself is a Python package that depends on TensorFlow 2.0, tensorflow-addons and plotly. You
-can install the package and its dependencies locally with pip.
+Glyphnet itself is a Python package that depends on TensorFlow 2.0. There are other requirements listed
+in `requirements.txt`. You can install the package and its requirements locally with pip.
+
+Note that some functionality (including `make_mp4.py` and model visualization) will require
+more dependencies that can be installed with conda.
 
 ```
 git clone https://github.com/noahtren/glyphnet
