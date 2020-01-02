@@ -4,6 +4,7 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 import numpy as np
+import plotly.express as px
 
 from glyphnet.models import make_generator_with_opt
 from glyphnet.utils import visualize
@@ -25,6 +26,27 @@ def random_glyphs(batch_size, glyph_shape):
     return noise_glyphs
 
 
+def gaussian_k(height, width, y, x, sigma, normalized=True):
+    """Make a square gaussian kernel centered at (x, y) with sigma as standard deviation.
+
+    Returns:
+        A 2D array of size [height, width] with a Gaussian kernel centered at (x, y)
+    """
+    # cast arguments used in calculations
+    x = tf.cast(x, tf.float32)
+    y = tf.cast(y, tf.float32)
+    sigma = tf.cast(sigma, tf.float32)
+    # create indices
+    xs = tf.range(0, width, delta=1., dtype=tf.float32)
+    ys = tf.range(0, height, delta=1., dtype=tf.float32)
+    ys = tf.expand_dims(ys, 1)
+    # apply gaussian function to indices based on distance from x, y
+    gaussian = tf.math.exp(-((xs - x)**2 + (ys - y)**2) / (2 * (sigma**2)))
+    if normalized:
+        gaussian = gaussian / tf.math.reduce_sum(gaussian) # all values will sum to 1
+    return gaussian
+
+
 class Differentiable_Augment:
     """Collection of differentiable augmentation functions implemented in TF
     """
@@ -37,7 +59,9 @@ class Differentiable_Augment:
             2: 0.02,
             3: 0.03,
             4: 0.04,
-            5: 0.05
+            5: 0.05,
+            6: 0.06,
+            7: 0.07
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -59,6 +83,8 @@ class Differentiable_Augment:
             3: 0.1,
             4: 0.125,
             5: 0.15,
+            6: 0.175,
+            7: 0.2
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -97,6 +123,8 @@ class Differentiable_Augment:
             3: [0.8, 1.2],
             4: [0.75, 1.25],
             5: [0.7, 1.3],
+            6: [0.675, 1.325],
+            7: [0.65, 1.35]
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -119,6 +147,8 @@ class Differentiable_Augment:
             3: 3 * pi / 20,
             4: 4 * pi / 20,
             5: 5 * pi / 20,
+            6: 6 * pi / 20,
+            7: 7 * pi / 20,
         }
         min_angle = RADIANS[DIFFICULTY] * -1
         max_angle = RADIANS[DIFFICULTY]
@@ -129,7 +159,30 @@ class Differentiable_Augment:
         return glyphs
 
 
-def get_noisy_channel(func_names=['translate', 'resize', 'rotate', 'static']):
+    @staticmethod
+    def blur(glyphs, DIFFICULTY):
+        STDDEVS = {
+            0: 0.01,
+            1: 0.25,
+            2: 0.4,
+            3: 0.6,
+            4: 0.75,
+            5: 0.85,
+            6: 0.925,
+            7: 1.0
+        }
+        stddev = STDDEVS[DIFFICULTY]
+        gauss_kernel = gaussian_k(5, 5, 2, 2, stddev)
+
+        # Expand dimensions of `gauss_kernel` for `tf.nn.conv2d` signature.
+        gauss_kernel = gauss_kernel[:, :, tf.newaxis, tf.newaxis]
+
+        # Convolve.
+        glyphs = tf.nn.conv2d(glyphs, gauss_kernel, strides=[1, 1, 1, 1], padding="SAME")
+        return glyphs
+
+
+def get_noisy_channel(func_names=['blur', 'rotate', 'resize', 'translate', 'static']):
     """Return a function that adds noise to glyphs
     """
     def noise_pipeline(glyphs, funcs, DIFFICULTY):
@@ -147,10 +200,10 @@ def get_noisy_channel(func_names=['translate', 'resize', 'rotate', 'static']):
 
 # preview image augmentation
 if __name__ == "__main__":
-    DIFFICULTY = 4
     symbols = ['random'] * 9
     glyphs = random_glyphs(9, [16, 16, 1])
     noisy_chanel = get_noisy_channel()
-    new_glyphs = noisy_chanel(glyphs, DIFFICULTY)
     visualize(symbols, glyphs, 'Before Augmentation')
-    visualize(symbols, new_glyphs, f'After Augmentation (difficulty = {DIFFICULTY})')
+    for DIFFICULTY in range(0, 8):
+        new_glyphs = noisy_chanel(glyphs, DIFFICULTY)
+        visualize(symbols, new_glyphs, f'After Augmentation (difficulty = {DIFFICULTY})')

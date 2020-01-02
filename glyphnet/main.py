@@ -106,7 +106,7 @@ def update_difficulty(DIFFICULTY, loss):
     """
     if loss > 5 and DIFFICULTY > 0:
         DIFFICULTY -= 1
-    if loss < 1 and DIFFICULTY < 5:
+    if loss < 1 and DIFFICULTY < 7:
         DIFFICULTY += 1
     return DIFFICULTY
 
@@ -163,6 +163,7 @@ if __name__ == "__main__":
                 noise_glyphs = random_G(messages)
             else:
                 noise_glyphs = random_glyphs(opt.batch_size, glyph_shape)
+            noise_glyphs = noise_glyphs if opt.no_noise or DIFFICULTY == 0 else noisy_channel(glyphs, DIFFICULTY)
             with tf.GradientTape() as tape:
                 D_pred = D(noise_glyphs)
                 D_fake_loss = loss_fn(noise_labels, D_pred)

@@ -21,19 +21,19 @@ The task gets difficult because the communication channel is noisy. The transmit
 (**signal**) may be shifted, resized, rotated, etc. so that the received signal differs
 from the original signal.
 
-Another catch is that the communication channel becomes increasingly noisy over time (this
+Another catch is that the communication channel becomes _increasingly_ noisy over time (this
 is inspired by [Automatic Domain Randomization](https://openai.com/blog/solving-rubiks-cube/)
 and [POET](https://eng.uber.com/poet-open-ended-deep-learning/)). When G and D get too 
-competent in their current communication channel, the the channel becomes more noisy,
+competent within their current communication channel, the channel becomes more noisy,
 encouraging the language to evolve further.
 
-If the two neural networks are successful and perform well at a high difficult level, then they've created
+If the two neural networks are successful in communicating clearly across a noisy channel, then they've created
 a visual language that is robust to many different kinds of noise, which means it probably looks cool. 😎️
 
 ## Early Examples
 
 These are some examples of visual languages the models came up with after about 
-a day of coding. The plot titles are either letter or numbers, representing a unique
+a day of coding and half an hour of training. The plot titles are either letter or numbers, representing a unique
 symbol.
 
 ![](https://i.imgur.com/NNh58Nx.png)
