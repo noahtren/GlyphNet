@@ -1,3 +1,6 @@
 tensorflow-gpu==2.0.0
 tensorflow-addons==0.6.0
+imageio
+imageio-ffmpeg
+tqdm
 plotly

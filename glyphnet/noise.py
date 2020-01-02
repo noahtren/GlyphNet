@@ -55,13 +55,15 @@ class Differentiable_Augment:
     def static(glyphs, DIFFICULTY):
         STATIC_STDDEVS = {
             0: 0.00,
-            1: 0.01,
-            2: 0.02,
-            3: 0.03,
-            4: 0.04,
-            5: 0.05,
-            6: 0.06,
-            7: 0.07
+            1: 0.02,
+            2: 0.04,
+            3: 0.06,
+            4: 0.08,
+            5: 0.10,
+            6: 0.13,
+            7: 0.16,
+            8: 0.2,
+            9: 0.25,
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -78,13 +80,16 @@ class Differentiable_Augment:
         """
         SHIFT_PERCENTS = {
             0: 0.00,
-            1: 0.05,
-            2: 0.075,
-            3: 0.1,
-            4: 0.125,
-            5: 0.15,
-            6: 0.175,
-            7: 0.2
+            1: 0.025,
+            2: 0.05,
+            3: 0.075,
+            4: 0.1,
+            5: 0.125,
+            6: 0.15,
+            7: 0.175,
+            8: 0.1875,
+            9: 0.2,
+            10: 0.2125
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -124,7 +129,9 @@ class Differentiable_Augment:
             4: [0.75, 1.25],
             5: [0.7, 1.3],
             6: [0.675, 1.325],
-            7: [0.65, 1.35]
+            7: [0.65, 1.35],
+            8: [0.625, 1.375],
+            9: [0.60, 1.4],
         }
         glyph_shape = glyphs[0].shape
         # batch_size = glyphs.shape[0]
@@ -149,6 +156,8 @@ class Differentiable_Augment:
             5: 5 * pi / 20,
             6: 6 * pi / 20,
             7: 7 * pi / 20,
+            8: 8 * pi / 20,
+            9: 9 * pi / 20,
         }
         min_angle = RADIANS[DIFFICULTY] * -1
         max_angle = RADIANS[DIFFICULTY]
@@ -169,7 +178,9 @@ class Differentiable_Augment:
             4: 0.75,
             5: 0.85,
             6: 0.925,
-            7: 1.0
+            7: 1.0,
+            8: 1.05,
+            9: 1.1,
         }
         stddev = STDDEVS[DIFFICULTY]
         gauss_kernel = gaussian_k(5, 5, 2, 2, stddev)

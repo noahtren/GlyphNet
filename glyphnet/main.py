@@ -11,26 +11,26 @@ import plotly.graph_objects as go
 
 from glyphnet.models import make_generator_with_opt, make_discriminator_with_opt
 from glyphnet.noise import random_generator_noise, random_glyphs, get_noisy_channel
-from glyphnet.utils import visualize
+from glyphnet.utils import visualize, get_glyph_symbol
 
 
 def get_opt():
     """Use argparse library to assign options for training run.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--vector_dim', type=int, default=32,
+    parser.add_argument('--vector_dim', type=int, default=36,
                         help='The size of the vector to communicate')
     parser.add_argument('--encoding', type=str, default='one-hot',
                         help="'one-hot' to make all values 0 except for one. Unique num = vector_dim" +
                              "\n'binary' to make all values either 0 or 1, randomly distributed. Unique num = vector_dim ^ 2")
-    parser.add_argument('-r', type=int, default=6,
+    parser.add_argument('-r', type=int, default=7,
                         help='Number of upsample/downsample layers in G and D')
     parser.add_argument('--num_filters', type=int, default=8,
                         help='Number of filters to use right before and after the message')
     parser.add_argument('-c', type=int, default=1,
                         help='Number of channels in the signal. 3 produces color images')
-    parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--epochs', type=int, default=30)
+    parser.add_argument('--batch_size', type=int, default=36)
+    parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--steps_per_epoch', type=int, default=250)
     parser.add_argument('--no_noise', action='store_true', default=False,
                         help='Boolean flag to train with or without a noisy channel')
@@ -75,27 +75,12 @@ def make_noise_labels(batch_size, vector_dim):
     return noise_label
 
 
-def get_glyph_symbol(message):
-    """Get an alphanumeric symbol to associate with a given message/glyph
-    """
-    if opt.encoding == 'one-hot':
-        message = tf.argmax(message).numpy()
-        if opt.vector_dim <= 26:
-            return chr(message + 97)
-        else:
-            return str(message)
-    elif opt.encoding == 'binary':
-        return ''.join(str(int(digit.numpy())) for digit in message)
-    else:
-        raise RuntimeError(f"Encoding '{opt.encoding}' not understood")
-
-
 def visualize_samples(dim, title):
     """Generate a square of samples and visualize them
     """
     num_glyphs = dim ** 2
     messages, _ = make_messages(num_glyphs, opt.encoding, opt.vector_dim)
-    symbols = [get_glyph_symbol(message) for message in messages]
+    symbols = [get_glyph_symbol(message, opt.encoding, opt.vector_dim) for message in messages]
     glyphs = G(messages)
     visualize(symbols, glyphs, title)
 
@@ -129,8 +114,8 @@ if __name__ == "__main__":
     else:
         loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-    G_optim = tf.keras.optimizers.Adam(lr=0.0005, beta_1=0.5)
-    D_optim = tf.keras.optimizers.Adam(lr=0.0005, beta_1=0.5)
+    G_optim = tf.keras.optimizers.Adam(lr=0.00025, beta_1=0.5)
+    D_optim = tf.keras.optimizers.Adam(lr=0.00025, beta_1=0.5)
     # noisy channel adds noise to generated glyphs
     noisy_channel = get_noisy_channel()
 

@@ -2,7 +2,23 @@ import tensorflow as tf
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-def visualize(symbols, glyphs, title):
+
+def get_glyph_symbol(message, encoding, vector_dim):
+    """Get an alphanumeric symbol to associate with a given message/glyph
+    """
+    if encoding == 'one-hot':
+        message = tf.argmax(message).numpy()
+        if vector_dim <= 26:
+            return chr(message + 97)
+        else:
+            return str(message)
+    elif encoding == 'binary':
+        return ''.join(str(int(digit.numpy())) for digit in message)
+    else:
+        raise RuntimeError(f"Encoding '{encoding}' not understood")
+
+
+def visualize(symbols, glyphs, title, get_fig=False, use_titles=True):
     """Visualize a square of samples and their symbol labels
 
     Args:
@@ -10,12 +26,13 @@ def visualize(symbols, glyphs, title):
         glyphs: a tensor or list of glyphs. These should be normalized from
             0 to 1 by a sigmoid activation function
         title: title of the plot
+        get_fig: if true, return the Plotly figure object instead of visualizing immediately
     """
     dim = len(glyphs) ** (1/2)
     assert dim == int(dim), "Number of glyphs should be square"
     dim = int(dim)
     glyphs = glyphs * 255. # make visual
-    fig = make_subplots(dim, dim, subplot_titles=symbols)
+    fig = make_subplots(dim, dim, subplot_titles=symbols if use_titles else None, horizontal_spacing=0.01, vertical_spacing=0.01)
     row_num = 1; col_num = 1
     for glyph in glyphs:
         if glyph.shape[2] == 1:
@@ -27,4 +44,7 @@ def visualize(symbols, glyphs, title):
         else:
             col_num += 1
     fig.update_layout(title_text=title)
-    fig.show()
+    if get_fig:
+        return fig
+    else:
+        fig.show()
