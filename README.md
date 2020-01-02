@@ -7,22 +7,28 @@ work, but all of the code here is original.
 ## How it works
 
 The task is based on the Shannon-Weaver model of communication, where
-the transmitter and receiver roles are taken by two neural networks, G (a generator)
-and D (a discriminator). G plays the transmitter role, and D is the receiver.
+the transmitter and receiver roles are played by two neural networks, G (a generator)
+and D (a discriminator).
 
 ![Shannon-Weaver Model](https://i.imgur.com/0F8K9jX.png)
 
 G turns a **message** into an image (**signal**) that the discriminator D tries to
-decode back into the original message. The message is either a one-hot
-vector or a binary string. The two networks are trained at the same time,
-like an autoencoder.
+decode back into the original message. The message is either a one-hot encoded
+vector or a vector of binary values (ex. [0, 1, 1, 0...]). The two networks are trained
+at the same time, like an autoencoder.
 
-The task gets difficult because the
-communication channel is noisy. The transmitted image (**signal**) may be shifted, resized,
-rotated, etc. so that the received signal differs from the original signal.
+The task gets difficult because the communication channel is noisy. The transmitted image
+(**signal**) may be shifted, resized, rotated, etc. so that the received signal differs
+from the original signal.
 
-If the two neural networks are successful, then they've created a visual language that
-is robust to different kinds of noise, which means it probably looks cool. 😎️
+Another catch is that the communication channel becomes increasingly noisy over time (this
+is inspired by [Automatic Domain Randomization](https://openai.com/blog/solving-rubiks-cube/)
+and [POET](https://eng.uber.com/poet-open-ended-deep-learning/)). When G and D get too 
+competent in their current communication channel, the the channel becomes more noisy,
+encouraging the language to evolve further.
+
+If the two neural networks are successful and perform well at a high difficult level, then they've created
+a visual language that is robust to many different kinds of noise, which means it probably looks cool. 😎️
 
 ## Early Examples
 
@@ -36,8 +42,8 @@ symbol.
 
 ## Installation
 
-Glyphnet itself is a Python package that depends on TensorFlow 2.0 and Plotly. You
-can install the package and its dependencies with `pip`.
+Glyphnet itself is a Python package that depends on TensorFlow 2.0, tensorflow-addons and plotly. You
+can install the package and its dependencies locally with pip.
 
 ```
 git clone https://github.com/noahtren/glyphnet
