@@ -201,12 +201,13 @@ def get_noisy_channel(func_names=['static', 'blur', 'resize', 'translate', 'rota
     def noise_pipeline(glyphs, funcs, DIFFICULTY):
         """Apply a series of functions to glyphs, in order
         """
-        DIFFICULTY = random.choice(list(range(DIFFICULTY + 1))) if DIFFICULTY != 0 else 0
         if DIFFICULTY == 0:
             return glyphs
         else:
             for func in funcs:
-                glyphs = func(glyphs, DIFFICULTY)
+                this_difficulty = random.choice(list(range(DIFFICULTY + 1)))
+                if this_difficulty != 0:
+                    glyphs = func(glyphs, this_difficulty)
             return glyphs
     funcs = []
     for func_name in func_names:
