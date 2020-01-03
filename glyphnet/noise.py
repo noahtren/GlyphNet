@@ -1,8 +1,6 @@
 """Different strategies for introducing noise into the communication channel
 """
 
-import random
-
 import tensorflow as tf
 import tensorflow_addons as tfa
 import numpy as np
@@ -185,26 +183,29 @@ class Differentiable_Augment:
             9: 2,
         }
         stddev = STDDEVS[DIFFICULTY]
-        gauss_kernel = gaussian_k(7, 7, 2, 2, stddev)
+        gauss_kernel = gaussian_k(7, 7, 3, 3, stddev)
 
         # Expand dimensions of `gauss_kernel` for `tf.nn.conv2d` signature.
         gauss_kernel = gauss_kernel[:, :, tf.newaxis, tf.newaxis]
 
         # Convolve.
-        glyphs = tf.nn.conv2d(glyphs, gauss_kernel, padding="SAME")
+        glyphs = tf.nn.conv2d(glyphs, gauss_kernel, strides=1, padding="SAME")
         return glyphs
 
 
-def get_noisy_channel(func_names=['rotate', 'static']):
+def get_noisy_channel(func_names=['static', 'blur', 'resize', 'translate', 'rotate']):
     """Return a function that adds noise to glyphs
     """
     def noise_pipeline(glyphs, funcs, DIFFICULTY):
         """Apply a series of functions to glyphs, in order
         """
-        DIFFICULTY = 0 if DIFFICULTY == 0 else random.choice(list(range(DIFFICULTY + 1)))
-        for func in funcs:
-            glyphs = func(glyphs, DIFFICULTY)
-        return glyphs
+        DIFFICULTY = random.choice(list(range(DIFFICULTY + 1))) if DIFFICULTY != 0 else 0
+        if DIFFICULTY == 0:
+            return glyphs
+        else:
+            for func in funcs:
+                glyphs = func(glyphs, DIFFICULTY)
+            return glyphs
     funcs = []
     for func_name in func_names:
         assert func_name in dir(Differentiable_Augment), f"Function '{func_name}' doesn't exist"
@@ -215,7 +216,7 @@ def get_noisy_channel(func_names=['rotate', 'static']):
 # preview image augmentation
 if __name__ == "__main__":
     symbols = ['random'] * 9
-    glyphs = random_glyphs(9, [16, 16, 1])
+    glyphs = random_glyphs(9, [128, 128, 1])
     noisy_chanel = get_noisy_channel()
     visualize(symbols, glyphs, 'Before Augmentation')
     for DIFFICULTY in range(10):

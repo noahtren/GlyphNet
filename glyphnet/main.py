@@ -128,12 +128,10 @@ if __name__ == "__main__":
         random_G = make_generator_with_opt(opt)
         total_epoch_loss = 0
         for step in range(opt.steps_per_epoch):
-
             # Train discriminator on positive example
             messages, labels = make_messages(opt.batch_size, opt.encoding, opt.vector_dim)
             glyphs = G(messages)
-            # code.interact(local=locals())
-            glyphs = glyphs if opt.no_noise or DIFFICULTY == 0 else noisy_channel(glyphs, DIFFICULTY)
+            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, DIFFICULTY)
             with tf.GradientTape() as tape:
                 D_pred = D(glyphs)
                 D_loss = loss_fn(labels, D_pred)
@@ -153,7 +151,7 @@ if __name__ == "__main__":
                 noise_glyphs = random_G(messages)
             else:
                 noise_glyphs = random_glyphs(opt.batch_size, glyph_shape)
-            noise_glyphs = noise_glyphs if opt.no_noise or DIFFICULTY == 0 else noisy_channel(glyphs, DIFFICULTY)
+            noise_glyphs = noise_glyphs if opt.no_noise else noisy_channel(noise_glyphs, DIFFICULTY)
             with tf.GradientTape() as tape:
                 D_pred = D(noise_glyphs)
                 D_fake_loss = loss_fn(noise_labels, D_pred)
@@ -164,7 +162,7 @@ if __name__ == "__main__":
             messages, labels = make_messages(opt.batch_size, opt.encoding, opt.vector_dim)
             with tf.GradientTape() as tape:
                 glyphs = G(messages)
-                glyphs = glyphs if opt.no_noise or DIFFICULTY == 0 else noisy_channel(glyphs, DIFFICULTY)
+                glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, DIFFICULTY)
                 D_pred = D(glyphs)
                 G_loss = loss_fn(labels, D_pred)
             grads = tape.gradient(G_loss, G.trainable_variables)
