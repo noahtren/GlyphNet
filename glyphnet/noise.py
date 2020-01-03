@@ -1,6 +1,8 @@
 """Different strategies for introducing noise into the communication channel
 """
 
+import random
+
 import tensorflow as tf
 import tensorflow_addons as tfa
 import numpy as np
@@ -62,8 +64,8 @@ class Differentiable_Augment:
             5: 0.10,
             6: 0.13,
             7: 0.16,
-            8: 0.2,
-            9: 0.25,
+            8: 0.18,
+            9: 0.2,
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -82,21 +84,21 @@ class Differentiable_Augment:
             0: 0.00,
             1: 0.025,
             2: 0.05,
-            3: 0.075,
-            4: 0.1,
-            5: 0.125,
-            6: 0.15,
-            7: 0.175,
-            8: 0.1875,
-            9: 0.2,
-            10: 0.2125
+            3: 0.07,
+            4: 0.09,
+            5: 0.1,
+            6: 0.11,
+            7: 0.12,
+            8: 0.13,
+            9: 0.14,
+            10: 0.15
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
         max_shift_percent = SHIFT_PERCENTS[DIFFICULTY]
         average_glyph_dim = (glyph_shape[0] + glyph_shape[1]) / 2
-        minval = int(max_shift_percent * average_glyph_dim * -1)
-        maxval = int(max_shift_percent * average_glyph_dim)
+        minval = int(round(max_shift_percent * average_glyph_dim * -1))
+        maxval = int(round(max_shift_percent * average_glyph_dim))
         shift_x, shift_y = tf.random.uniform([2], minval=minval, maxval=maxval + 1, dtype=tf.int32)
         if shift_x != 0:
             zeros = tf.zeros((batch_size, glyph_shape[0], abs(shift_x), glyph_shape[2]), dtype=tf.float32)
@@ -149,15 +151,15 @@ class Differentiable_Augment:
         pi = 3.14159265
         RADIANS = {
             0: 0,
-            1: 1 * pi / 20,
-            2: 2 * pi / 20,
-            3: 3 * pi / 20,
-            4: 4 * pi / 20,
-            5: 5 * pi / 20,
-            6: 6 * pi / 20,
-            7: 7 * pi / 20,
-            8: 8 * pi / 20,
-            9: 9 * pi / 20,
+            1: 1 * pi / 30,
+            2: 2 * pi / 30,
+            3: 3 * pi / 30,
+            4: 4 * pi / 30,
+            5: 5 * pi / 30,
+            6: 6 * pi / 30,
+            7: 7 * pi / 30,
+            8: 8 * pi / 30,
+            9: 9 * pi / 30,
         }
         min_angle = RADIANS[DIFFICULTY] * -1
         max_angle = RADIANS[DIFFICULTY]
@@ -172,33 +174,34 @@ class Differentiable_Augment:
     def blur(glyphs, DIFFICULTY):
         STDDEVS = {
             0: 0.01,
-            1: 0.25,
-            2: 0.4,
-            3: 0.6,
-            4: 0.75,
-            5: 0.85,
-            6: 0.925,
-            7: 1.0,
-            8: 1.05,
-            9: 1.1,
+            1: 0.3,
+            2: 0.6,
+            3: 0.8,
+            4: 0.9,
+            5: 1,
+            6: 1.25,
+            7: 1.5,
+            8: 1.75,
+            9: 2,
         }
         stddev = STDDEVS[DIFFICULTY]
-        gauss_kernel = gaussian_k(5, 5, 2, 2, stddev)
+        gauss_kernel = gaussian_k(7, 7, 2, 2, stddev)
 
         # Expand dimensions of `gauss_kernel` for `tf.nn.conv2d` signature.
         gauss_kernel = gauss_kernel[:, :, tf.newaxis, tf.newaxis]
 
         # Convolve.
-        glyphs = tf.nn.conv2d(glyphs, gauss_kernel, strides=[1, 1, 1, 1], padding="SAME")
+        glyphs = tf.nn.conv2d(glyphs, gauss_kernel, padding="SAME")
         return glyphs
 
 
-def get_noisy_channel(func_names=['blur', 'rotate', 'resize', 'translate', 'static']):
+def get_noisy_channel(func_names=['rotate', 'static']):
     """Return a function that adds noise to glyphs
     """
     def noise_pipeline(glyphs, funcs, DIFFICULTY):
         """Apply a series of functions to glyphs, in order
         """
+        DIFFICULTY = 0 if DIFFICULTY == 0 else random.choice(list(range(DIFFICULTY + 1)))
         for func in funcs:
             glyphs = func(glyphs, DIFFICULTY)
         return glyphs
@@ -215,6 +218,6 @@ if __name__ == "__main__":
     glyphs = random_glyphs(9, [16, 16, 1])
     noisy_chanel = get_noisy_channel()
     visualize(symbols, glyphs, 'Before Augmentation')
-    for DIFFICULTY in range(0, 8):
+    for DIFFICULTY in range(10):
         new_glyphs = noisy_chanel(glyphs, DIFFICULTY)
         visualize(symbols, new_glyphs, f'After Augmentation (difficulty = {DIFFICULTY})')
