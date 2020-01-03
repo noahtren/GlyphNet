@@ -2,3 +2,4 @@
 __pycache__/
 glyphnet.egg-info/
 checkpoints/
+*.mp4
