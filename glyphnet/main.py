@@ -93,7 +93,7 @@ def update_difficulty(DIFFICULTY, loss):
     """
     if loss > 5 and DIFFICULTY > 0:
         DIFFICULTY -= 1
-    if loss < 2 and DIFFICULTY < 7:
+    if loss < 2 and DIFFICULTY < 9:
         DIFFICULTY += 1
     return DIFFICULTY
 
