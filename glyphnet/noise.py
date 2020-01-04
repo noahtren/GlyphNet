@@ -130,10 +130,10 @@ class Differentiable_Augment:
             3: [0.8, 1.2],
             4: [0.75, 1.25],
             5: [0.7, 1.3],
-            6: [0.675, 1.325],
-            7: [0.65, 1.35],
-            8: [0.625, 1.375],
-            9: [0.60, 1.4],
+            6: [0.65, 1.325],
+            7: [0.6, 1.35],
+            8: [0.55, 1.375],
+            9: [0.50, 1.4],
         }
         glyph_shape = glyphs[0].shape
         # batch_size = glyphs.shape[0]
@@ -174,15 +174,15 @@ class Differentiable_Augment:
     def blur(glyphs, DIFFICULTY):
         STDDEVS = {
             0: 0.01,
-            1: 0.3,
-            2: 0.6,
-            3: 0.8,
-            4: 0.9,
-            5: 1,
-            6: 1.25,
-            7: 1.5,
-            8: 1.75,
-            9: 2,
+            1: 0.2,
+            2: 0.4,
+            3: 0.6,
+            4: 0.8,
+            5: 0.9,
+            6: 1.0,
+            7: 1.25,
+            8: 1.5,
+            9: 1.6,
         }
         stddev = STDDEVS[DIFFICULTY]
         gauss_kernel = gaussian_k(7, 7, 3, 3, stddev)
@@ -195,31 +195,54 @@ class Differentiable_Augment:
         return glyphs
 
 
+def random_augmentation(glyphs):
+    """Apply an additional random augmentation to glyphs
+    """
+    if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
+        # hard sigmoid
+        glyphs = tf.nn.sigmoid((glyphs - 0.5) * 30.)
+    if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
+        # inverse function
+        glyphs = 1 - glyphs
+    if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
+        # convolve with a random kernel
+        kernel = tf.random.normal((3, 3), mean=0, stddev=1)
+        kernel = kernel / tf.math.reduce_sum(kernel)
+        kernel = kernel[:, :, tf.newaxis, tf.newaxis]
+        glyphs = tf.nn.conv2d(glyphs, kernel, strides=1, padding="SAME")
+    return glyphs
+
+
 def get_noisy_channel(func_names=['static', 'blur', 'resize', 'translate', 'rotate']):
     """Return a function that adds noise to glyphs
     """
-    def noise_pipeline(glyphs, funcs, DIFFICULTY):
+    def noise_pipeline(glyphs, funcs, DIFFICULTY, randomize=False):
         """Apply a series of functions to glyphs, in order
         """
         if DIFFICULTY == 0:
             return glyphs
         else:
             for func in funcs:
-                this_difficulty = random.choice(list(range(DIFFICULTY + 1)))
+                this_difficulty = None
+                if randomize:
+                    this_difficulty = random.choice(list(range(DIFFICULTY + 1)))
+                else:
+                    this_difficulty = DIFFICULTY
                 if this_difficulty != 0:
                     glyphs = func(glyphs, this_difficulty)
+            glyphs = random_augmentation(glyphs)
             return glyphs
     funcs = []
     for func_name in func_names:
         assert func_name in dir(Differentiable_Augment), f"Function '{func_name}' doesn't exist"
         funcs.append(getattr(Differentiable_Augment, func_name))
-    return lambda glyphs, DIFFICULTY: noise_pipeline(glyphs, funcs, DIFFICULTY)
+    return lambda glyphs, DIFFICULTY, randomize=False: noise_pipeline(glyphs, funcs, DIFFICULTY, randomize)
 
 
 # preview image augmentation
 if __name__ == "__main__":
     symbols = ['random'] * 9
-    glyphs = random_glyphs(9, [128, 128, 1])
+    glyphs = random_glyphs(9, [64, 64, 1])
     noisy_chanel = get_noisy_channel()
     visualize(symbols, glyphs, 'Before Augmentation')
     for DIFFICULTY in range(10):
