@@ -49,7 +49,7 @@ Note that some functionality (including `make_mp4.py` and model visualization) w
 more dependencies that can be installed with conda.
 
 ```
-git clone https://github.com/noahtren/glyphnet
+git clone https://github.com/noahtren/GlyphNet
 pip install -e .
 ```
 
