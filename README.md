@@ -4,6 +4,8 @@ GlyphNet is an experiment in using neural networks to generate a visual language
 This project is inspired by Joel Simon's [Dimensions of Dialogue](https://www.joelsimon.net/dimensions-of-dialogue.html)
 work, but all of the code here is original.
 
+![](media/128char.gif)
+
 ## How it works
 
 The task is based on the Shannon-Weaver model of communication, where
@@ -30,15 +32,6 @@ encouraging the language to evolve further.
 If the two neural networks are successful in communicating clearly across a noisy channel, then they've created
 a visual language that is robust to many different kinds of noise, which means it probably looks cool. 😎️
 
-## Early Examples
-
-These are some examples of visual languages the models came up with after about 
-a day of coding and half an hour of training. The plot titles are either letter or numbers, representing a unique
-symbol. I'll put some later examples here soon.
-
-![](https://i.imgur.com/NNh58Nx.png)
-
-![](https://i.imgur.com/NkSESQL.png)
 
 ## Installation
 
