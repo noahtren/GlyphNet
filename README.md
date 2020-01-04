@@ -1,6 +1,6 @@
-# Glyphnet
+# GlyphNet
 
-Glyphnet is an experiment in using neural networks to generate a visual language.
+GlyphNet is an experiment in using neural networks to generate a visual language.
 This project is inspired by Joel Simon's [Dimensions of Dialogue](https://www.joelsimon.net/dimensions-of-dialogue.html)
 work, but all of the code here is original.
 
@@ -42,7 +42,7 @@ symbol. I'll put some later examples here soon.
 
 ## Installation
 
-Glyphnet itself is a Python package that depends on TensorFlow 2.0. There are other requirements listed
+GlyphNet itself is a Python package that depends on TensorFlow 2.0. There are other requirements listed
 in `requirements.txt`. You can install the package and its requirements locally with pip.
 
 Note that some functionality (including `make_mp4.py` and model visualization) will require
