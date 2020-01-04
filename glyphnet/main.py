@@ -18,14 +18,14 @@ def get_opt():
     """Use argparse library to assign options for training run.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--vector_dim', type=int, default=36,
+    parser.add_argument('--vector_dim', type=int, default=128,
                         help='The size of the vector to communicate')
     parser.add_argument('--encoding', type=str, default='one-hot',
                         help="'one-hot' to make all values 0 except for one. Unique num = vector_dim" +
                              "\n'binary' to make all values either 0 or 1, randomly distributed. Unique num = vector_dim ^ 2")
-    parser.add_argument('-r', type=int, default=7,
+    parser.add_argument('-r', type=int, default=6,
                         help='Number of upsample/downsample layers in G and D')
-    parser.add_argument('--num_filters', type=int, default=8,
+    parser.add_argument('--num_filters', type=int, default=16,
                         help='Number of filters to use right before and after the message')
     parser.add_argument('-c', type=int, default=1,
                         help='Number of channels in the signal. 3 produces color images')
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             # Train discriminator on positive example
             messages, labels = make_messages(opt.batch_size, opt.encoding, opt.vector_dim)
             glyphs = G(messages)
-            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, DIFFICULTY)
+            glyphs = glyphs if opt.no_noise else noisy_channel(glyphs, DIFFICULTY, randomize=True)
             with tf.GradientTape() as tape:
                 D_pred = D(glyphs)
                 D_loss = loss_fn(labels, D_pred)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
                 noise_glyphs = random_G(messages)
             else:
                 noise_glyphs = random_glyphs(opt.batch_size, glyph_shape)
-            noise_glyphs = noise_glyphs if opt.no_noise else noisy_channel(noise_glyphs, DIFFICULTY)
+            noise_glyphs = noise_glyphs if opt.no_noise else noisy_channel(noise_glyphs, DIFFICULTY, randomize=True)
             with tf.GradientTape() as tape:
                 D_pred = D(noise_glyphs)
                 D_fake_loss = loss_fn(noise_labels, D_pred)
@@ -179,7 +179,7 @@ if __name__ == "__main__":
         DIFFICULTY = update_difficulty(DIFFICULTY, epoch_loss)
 
         if (epoch + 1) % opt.vis_frequency == 0:
-            visualize_samples(3, title=f'Epoch {epoch + 1}')
+            visualize_samples(4, title=f'Epoch {epoch + 1}')
         
         G.save(os.path.join('checkpoints', opt.run, 'G', f'{epoch + 1:03d}_{epoch_loss}.h5'))
         D.save(os.path.join('checkpoints', opt.run, 'D', f'{epoch + 1:03d}_{epoch_loss}.h5'))
