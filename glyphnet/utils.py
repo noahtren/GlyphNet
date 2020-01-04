@@ -1,4 +1,7 @@
 import tensorflow as tf
+
+import numpy as np
+
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
@@ -31,7 +34,7 @@ def visualize(symbols, glyphs, title, get_fig=False, use_titles=True):
     dim = len(glyphs) ** (1/2)
     assert dim == int(dim), "Number of glyphs should be square"
     dim = int(dim)
-    glyphs = glyphs * 255. # make visual
+    glyphs = np.array(glyphs * 255.).astype('uint8') # make visual
     fig = make_subplots(dim, dim, subplot_titles=symbols if use_titles else None, horizontal_spacing=0.01, vertical_spacing=0.01)
     row_num = 1; col_num = 1
     for glyph in glyphs:

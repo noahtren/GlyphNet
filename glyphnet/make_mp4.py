@@ -11,11 +11,12 @@ from tqdm import tqdm
 from glyphnet.utils import visualize, get_glyph_symbol
 from glyphnet.models import swish
 
-RUN_NAME = 'first'
+RUN_NAME = 'newnoise'
 ENCODING = 'one-hot'
-VECTOR_DIM = 32
+VECTOR_DIM = 36
+PREVIEW = False
 message_dim = 64 # size of image
-num_message_dim = 5 # size of display
+num_message_dim = 6 # size of display
 num_messages = num_message_dim ** 2
 
 def make_first_n_messages(n, vector_dim, encoding):
@@ -43,20 +44,23 @@ def write_images():
         messages = make_first_n_messages(num_messages, VECTOR_DIM, ENCODING)
         symbols = [get_glyph_symbol(message, ENCODING, VECTOR_DIM) for message in messages]
         glyphs = G(messages)
-        fig = visualize(symbols, glyphs, f'Epoch {i + 1}', get_fig=True, use_titles=False)
-        # formatting
-        margin = 20
-        top_margin = 40
-        fig.update_layout(width=(message_dim * num_message_dim * 1.1) + margin * 2,
-                          height=(message_dim * num_message_dim * 1.1) + margin + top_margin,
-                          margin=go.layout.Margin(l=margin,
-                                                  r=margin,
-                                                  b=margin,
-                                                  t=top_margin,
-                                                  pad=0))
-        fig.update_xaxes(showticklabels=False)
-        fig.update_yaxes(showticklabels=False)
-        fig.write_image(os.path.join('images', RUN_NAME, f'{i+1:03d}.png'))
+        if PREVIEW:
+            visualize(symbols, glyphs, f'Epoch {i + 1}', get_fig=False, use_titles=False)
+        else:
+            fig = visualize(symbols, glyphs, f'Epoch {i + 1}', get_fig=True, use_titles=False)
+            # formatting
+            margin = 20
+            top_margin = 40
+            fig.update_layout(width=(message_dim * num_message_dim * 1.1) + margin * 2,
+                            height=(message_dim * num_message_dim * 1.1) + margin + top_margin,
+                            margin=go.layout.Margin(l=margin,
+                                                    r=margin,
+                                                    b=margin,
+                                                    t=top_margin,
+                                                    pad=0))
+            fig.update_xaxes(showticklabels=False)
+            fig.update_yaxes(showticklabels=False)
+            fig.write_image(os.path.join('images', RUN_NAME, f'{i+1:03d}.png'))
 
 
 def make_mp4():
