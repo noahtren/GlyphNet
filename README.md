@@ -1,8 +1,7 @@
 # GlyphNet
 
 GlyphNet is an experiment in using neural networks to generate a visual language.
-This project is inspired by Joel Simon's [Dimensions of Dialogue](https://www.joelsimon.net/dimensions-of-dialogue.html)
-work, but all of the code here is original.
+This project is inspired by Joel Simon's [Dimensions of Dialogue](https://www.joelsimon.net/dimensions-of-dialogue.html).
 
 ![](media/128char.gif) 
 
