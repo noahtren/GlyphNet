@@ -11,9 +11,9 @@ from tqdm import tqdm
 from glyphnet.utils import visualize, get_glyph_symbol
 from glyphnet.models import swish
 
-RUN_NAME = 'newnoise'
+RUN_NAME = 'color_noise'
 ENCODING = 'one-hot'
-VECTOR_DIM = 36
+VECTOR_DIM = 128
 PREVIEW = False
 message_dim = 64 # size of image
 num_message_dim = 6 # size of display
@@ -33,6 +33,8 @@ def write_images():
     """
     G_names = sorted(os.listdir(os.path.join('checkpoints', RUN_NAME, 'G')))
     D_names = sorted(os.listdir(os.path.join('checkpoints', RUN_NAME, 'D')))
+    if D_names == []:
+        D_names = [None] * len(G_names)
 
     os.makedirs(os.path.join('images', RUN_NAME), exist_ok=True)
     custom_objects = {'swish': swish}

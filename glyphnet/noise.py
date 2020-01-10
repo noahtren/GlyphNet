@@ -66,6 +66,12 @@ class Differentiable_Augment:
             7: 0.16,
             8: 0.18,
             9: 0.2,
+            10: 0.21,
+            11: 0.22,
+            12: 0.23,
+            13: 0.24,
+            14: 0.25,
+            15: 0.26,
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -91,7 +97,12 @@ class Differentiable_Augment:
             7: 0.12,
             8: 0.13,
             9: 0.14,
-            10: 0.15
+            10: 0.15,
+            11: 0.16,
+            12: 0.17,
+            13: 0.18,
+            14: 0.19,
+            15: 0.20
         }
         glyph_shape = glyphs[0].shape
         batch_size = glyphs.shape[0]
@@ -134,6 +145,12 @@ class Differentiable_Augment:
             7: [0.6, 1.35],
             8: [0.55, 1.375],
             9: [0.50, 1.4],
+            10: [0.48, 1.42],
+            11: [0.46, 1.44],
+            12: [0.44, 1.46],
+            13: [0.42, 1.48],
+            14: [0.4, 1.5],
+            15: [0.4, 1.5],
         }
         glyph_shape = glyphs[0].shape
         # batch_size = glyphs.shape[0]
@@ -160,6 +177,12 @@ class Differentiable_Augment:
             7: 7 * pi / 30,
             8: 8 * pi / 30,
             9: 9 * pi / 30,
+            10: 9.5 * pi / 30,
+            11: 10 * pi / 30,
+            12: 10.5 * pi / 30,
+            13: 11 * pi / 30,
+            14: 11.5 * pi / 30,
+            15: 12 * pi / 30,
         }
         min_angle = RADIANS[DIFFICULTY] * -1
         max_angle = RADIANS[DIFFICULTY]
@@ -183,33 +206,50 @@ class Differentiable_Augment:
             7: 1.25,
             8: 1.5,
             9: 1.6,
+            10: 1.7,
+            11: 1.8,
+            12: 1.9,
+            13: 2.0,
+            14: 2.1,
+            15: 2.2
         }
+        glyph_shape = glyphs[0].shape
+        c = glyph_shape[2]
         stddev = STDDEVS[DIFFICULTY]
         gauss_kernel = gaussian_k(7, 7, 3, 3, stddev)
 
         # Expand dimensions of `gauss_kernel` for `tf.nn.conv2d` signature.
         gauss_kernel = gauss_kernel[:, :, tf.newaxis, tf.newaxis]
-
+        
         # Convolve.
-        glyphs = tf.nn.conv2d(glyphs, gauss_kernel, strides=1, padding="SAME")
+        out_channels = []
+        for c_ in range(c):
+            in_channel = tf.expand_dims(glyphs[:, :, :, c_], -1)
+            out_channel = tf.nn.conv2d(in_channel, gauss_kernel, strides=1, padding="SAME")
+            out_channel = tf.squeeze(out_channel)
+            out_channels.append(out_channel)
+        glyphs = out_channels[0] if len(out_channels) == 1 else tf.stack(out_channels, axis=-1)
         return glyphs
 
 
 def random_augmentation(glyphs):
-    """Apply an additional random augmentation to glyphs
+    """Apply a set of additional random augmentations that work well with single-channel glyphs.
+    These include calculating the inverse of the channel, doing a harder sigmoid activation, and
+    convolving the channel with a randomly initialized convolutional kernel.
     """
     if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
         # hard sigmoid
         glyphs = tf.nn.sigmoid((glyphs - 0.5) * 30.)
-    if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
-        # inverse function
-        glyphs = 1 - glyphs
-    if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
-        # convolve with a random kernel
-        kernel = tf.random.normal((3, 3), mean=0, stddev=1)
-        kernel = kernel / tf.math.reduce_sum(kernel)
-        kernel = kernel[:, :, tf.newaxis, tf.newaxis]
-        glyphs = tf.nn.conv2d(glyphs, kernel, strides=1, padding="SAME")
+    if glyphs.shape[3] == 1:
+        if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
+            # inverse function
+            glyphs = 1 - glyphs
+        if tf.random.uniform([], minval=0, maxval=2, dtype=tf.int32) == 1:
+            # convolve with a random kernel
+            kernel = tf.random.normal((3, 3), mean=0, stddev=1)
+            kernel = kernel / tf.math.reduce_sum(kernel)
+            kernel = kernel[:, :, tf.newaxis, tf.newaxis]
+            glyphs = tf.nn.conv2d(glyphs, kernel, strides=1, padding="SAME")
     return glyphs
 
 
@@ -242,7 +282,7 @@ def get_noisy_channel(func_names=['static', 'blur', 'resize', 'translate', 'rota
 # preview image augmentation
 if __name__ == "__main__":
     symbols = ['random'] * 9
-    glyphs = random_glyphs(9, [64, 64, 1])
+    glyphs = random_glyphs(9, [64, 64, 3])
     noisy_chanel = get_noisy_channel()
     visualize(symbols, glyphs, 'Before Augmentation')
     for DIFFICULTY in range(10):
